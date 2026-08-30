@@ -2,6 +2,11 @@ pub mod nix;
 
 use std::{ffi::OsStr, io, os::unix::process::CommandExt, process::Command};
 
+/// Maybe split package-manager backends from docker-image type backends??
+trait Backend {
+    
+}
+
 pub fn run() {}
 
 pub fn run_in_cur_terminal(shell_cmd: &str) -> Result<(), std::io::Error> {

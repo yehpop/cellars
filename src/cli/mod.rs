@@ -2,7 +2,7 @@ pub mod args;
 pub mod handler;
 
 use clap::{Parser, Subcommand};
-use args::{RunArgs, CreateArgs, ConfigArgs, ExitArgs, KillArgs, DiscardArgs, ListArgs};
+use args::{RunArgs, CreateArgs, ConfigArgs, ExitArgs, KillArgs, DiscardArgs, ListArgs, InstallArgs};
 
 
 #[derive(Parser, Debug)]
@@ -18,6 +18,7 @@ pub struct Cli {
 pub enum Commands {
     Run(RunArgs),
     Create(CreateArgs),
+    Install(InstallArgs),
     Config(ConfigArgs),
     Exit(ExitArgs),
     Kill(KillArgs),

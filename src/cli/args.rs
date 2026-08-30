@@ -7,9 +7,9 @@ use clap::{Args, value_parser};
 pub struct RunArgs {
     pub name: String,
 
-    #[arg(long_help="Path to the environment, can be used if the environment is to be opened from, for example a foo.nix file, and does not have a name or the name is forgotten.")]
-    #[arg(long="env-path", help = "Path to the environment", value_parser = value_parser!(PathBuf))]
-    path: PathBuf,
+    //#[arg(long_help="Path to the environment, can be used if the environment is to be opened from, for example a foo.nix file, and does not have a name or the name is forgotten.")]
+    //#[arg(long="env-path", help = "Path to the environment", value_parser = value_parser!(PathBuf))]
+   // path: PathBuf,
 
     #[arg(short='t', long="terminal", default_value_t = String::from("bash"), help = "Terminal to use for the environment")]
     terminal: String
@@ -25,8 +25,14 @@ pub struct CreateArgs {
     #[arg(long="overwrite-existing", default_value_t = false, help = "Overwrite existing environment if it exists")]
     overwrite_existing: bool,
 
-    #[arg(long="os-image-path", help = "Use OS image for the environment", value_parser = value_parser!(PathBuf))]
-    os_image: PathBuf,
+    //#[arg(long="os-image-path", help = "Use OS image for the environment", value_parser = value_parser!(PathBuf), required = false)]
+    //os_image: PathBuf,
+}
+
+#[derive(Args, Debug)]
+pub struct InstallArgs {
+    #[arg(long, help = "Install a package in the environment")]
+    pub package: String,
 }
 
 #[derive(Args, Debug)]
@@ -46,10 +52,10 @@ pub struct ExitArgs {
 
 #[derive(Args, Debug)]
 pub struct KillArgs {
-    name: String,
+    pub name: String,
 
     // make note
-    clean:bool,
+    //clean:bool,
 }
 
 #[derive(Args, Debug)]
