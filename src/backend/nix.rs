@@ -90,3 +90,19 @@ pub fn garbage_collect() -> Result<(), String> {
 pub fn shell_path(cellar: &Cellar) -> std::path::PathBuf {
     cellar.cellar_dir().join("shell.nix")
 }
+
+
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_gen_shell() {
+        let mut cellar = Cellar::new("test_env");
+        cellar.add_package("hello");
+        cellar.add_package("jq");
+
+        let shell_content = gen_shell(&cellar);
+        assert!(shell_content.contains("pkgs.hello"));
+        assert!(shell_content.contains("pkgs.jq"));
+    }
+}

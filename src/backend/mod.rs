@@ -38,3 +38,8 @@ pub fn run_in_new_terminal_with_cmd(shell_cmd: &str) -> Result<(), std::io::Erro
         .status()?;
     Ok(())
 }  
+
+
+mod tests {
+    use super::*;
+}

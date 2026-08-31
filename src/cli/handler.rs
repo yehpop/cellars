@@ -84,3 +84,6 @@ pub fn discard(_args: &args::DiscardArgs) -> Result<(), String>{
 pub fn list(_args: &args::ListArgs) -> Result<(), String>{
     Ok(())
 }
+
+
+mod tests {}
