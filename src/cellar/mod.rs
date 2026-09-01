@@ -70,3 +70,53 @@ impl Cellar {
         path
     }
 }
+
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_cellar_initializes_correctly() {
+
+    }
+
+    #[test]
+    fn cellar_package_list_stored_correctly() {
+
+    }
+
+
+    #[test]
+    fn cellar_can_save_and_load() {
+        let mut cellar = Cellar::new("test_env");
+        cellar.add_package("hello");
+        cellar.save().expect("Failed to save cellar");
+
+        let loaded_cellar = Cellar::load("test_env").expect("Failed to load cellar");
+        assert_eq!(loaded_cellar.name, "test");
+        assert!(loaded_cellar.packages.contains(&"hello".to_string()));
+    }
+
+    #[test]
+    fn test_cellar_serializes_to_toml() {
+        let mut cellar = Cellar::new("test_env");
+        cellar.add_package("git");
+        
+        let toml = toml::to_string(&cellar).unwrap();
+        assert!(toml.contains("test_env"));
+        assert!(toml.contains("git"));
+    }
+
+    /// Ofc this doesn't pass right now because my great cellar_dir() function doesn't sanitize the name. But it should. Right?
+    #[test]
+    fn test_cellar_dir_path_sanitizes_name() {
+        let cellar = Cellar::new("../../../../etc/passwd");
+        let path = cellar.cellar_dir();
+    
+        // Should not contain ".."
+        assert!(!path.to_string_lossy().contains(".."));
+    
+        // Should still be under cellars dir
+        let config_dir = dirs::config_dir().unwrap();
+        assert!(path.starts_with(config_dir.join("cellars")));
+    }
+}
