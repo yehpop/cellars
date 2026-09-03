@@ -9,7 +9,9 @@ pub fn run(_args: &args::RunArgs) -> Result<(), String>{
         return Err(format!("Cellar {} does not exist", _args.name));
     } // ?????
     let cellar = cellar::Cellar::load(&_args.name)?;
-    backend::nix::run_cellar(&cellar)?;
+    backend::nix::run_cellar(&cellar)?; // Before calling this the formerly mentioned issue should be resolved.
+                                        // nix run cellar will not create a shell file if non-existent, yet this is the logic i desire. (if there is a TOML)
+                                        // Maybe move the cellar exist check into the nix function and handle it there? Or maybe just check for the shell.nix file and if it doesnt exist then create it from the TOML file. (if it exists)
     Ok(())
 }
 
@@ -46,6 +48,7 @@ pub fn install(_args: &args::InstallArgs) -> Result<(), String> {
     backend::nix::write_shell(&cellar)?;
 
     println!("Installed package {} in environment cellar: {}", _args.package, cellar.name);
+    // And should i source it or just?? how does this even work idk.
     Ok(())
 }
 /// Handler for cellars config subcommand.
@@ -77,6 +80,8 @@ pub fn kill(_args: &args::KillArgs) -> Result<(), String>{
 
 /// Handler for cellars discard subcommand.
 pub fn discard(_args: &args::DiscardArgs) -> Result<(), String>{
+    // Remove the whole folder from cellars/dir
+    // Before that check if the shell.nix and nix profiles still exist and.. do something.
     Ok(())
 }
 
@@ -86,4 +91,7 @@ pub fn list(_args: &args::ListArgs) -> Result<(), String>{
 }
 
 
+/// Probably won't need unit tests for these functions, since they are just handlers for the CLI commands. 
+/// The actual logic is in the backend and cellar modules.
+/// Keeping for now, in case I need add some logic here as well?
 mod tests {}

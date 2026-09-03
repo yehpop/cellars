@@ -67,6 +67,22 @@ pub fn run_cellar(cellar: &Cellar) -> Result<(), String> {
     .exec().to_string())
 }
     
+/// Needs to be edited.
+/// RN removes all packages installed. So wont be cellar specific.
+/// I need to add profile keeping logic for nix aswell.
+/// So each cellar install or cellar add or whatever call will, update the toml, update the shell.nix AND nix profile install the package.
+/// Then when kill is called either there should be additional logic here that;
+/// first deletes packages from the nix profile, nix profile remove --all --profile $PROFILE
+/// deletes older generations of the nix profile nix profile wipe-history --profile $PROFILE
+/// and then deletes the profile rm $PROFILE
+/// and then runs garbage collection. nix-collect-garbage ?? or nix-store gc?? i'll look into that.
+/// 
+/// or each part of this logic will be separated into different functions and called from the kill handler in cli/handler.rs
+/// which seems the better option.
+/// 
+/// Tho I am unsure because I want to group backends to implement a common trait,
+/// Other package managers will have a different logic.
+/// Keep thinking be yusa
 pub fn garbage_collect() -> Result<(), String> {
     let status = Command::new("nix-collect-garbage")
         .arg("-d")

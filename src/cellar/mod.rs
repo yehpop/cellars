@@ -62,6 +62,7 @@ impl Cellar {
         Ok(cellar)
     }
 
+    /// Returns true if the cellar TOML file exists. Doesn't check the shell.nix file or the TOML file's content.
     pub fn exists(name: &str) -> bool {
         let path = dirs::config_dir()
             .map(|p| p.join("cellars").join("dir").join(name).join("cellar.toml"))
