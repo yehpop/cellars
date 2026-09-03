@@ -11,6 +11,14 @@ pub struct Cellar {
 
 impl Cellar {
     pub fn new(name: &str) -> Self {
+        let log_file = dirs::config_dir()
+            .expect("no config directory")
+            .join("cellars")
+            .join("cellars.LOG");
+        std::fs::write(&log_file, 
+        format!("{}: cellar: {} state: {}\n", chrono::Local::now().format("%Y-%m-%d %H:%M:%S"), name, "CREATED"))
+        .expect("could not write to log file: ");
+
         Self {
             name: name.to_string(),
             packages: vec![],
@@ -93,7 +101,7 @@ mod tests {
         cellar.save().expect("Failed to save cellar");
 
         let loaded_cellar = Cellar::load("test_env").expect("Failed to load cellar");
-        assert_eq!(loaded_cellar.name, "test");
+        assert_eq!(loaded_cellar.name, "test_env");
         assert!(loaded_cellar.packages.contains(&"hello".to_string()));
     }
 

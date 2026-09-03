@@ -1,3 +1,5 @@
+use std::io::Stdin;
+
 use crate::{backend, cellar, cli::args};
 
 /// Handler for cellars run subcommand.
@@ -44,6 +46,7 @@ pub fn install(_args: &args::InstallArgs) -> Result<(), String> {
     let cellar = std::env::var("CELLAR_ENV").map_err(|_| "CELLAR_ENV environment variable not set".to_string())?;
     let mut cellar = cellar::Cellar::load(&cellar)?;
     cellar.add_package(&_args.package);
+    backend::nix::add_package(&cellar, &_args.package)?;
     cellar.save()?;
     backend::nix::write_shell(&cellar)?;
 
@@ -80,8 +83,37 @@ pub fn kill(_args: &args::KillArgs) -> Result<(), String>{
 
 /// Handler for cellars discard subcommand.
 pub fn discard(_args: &args::DiscardArgs) -> Result<(), String>{
+    let confirm = inquire::Confirm::new(&format!("Are you sure you want to discard the environment cellar: {}?", _args.name))
+        .with_default(false)
+        .prompt()
+        .map_err(|e| format!("failed to prompt user: {}", e))?;    
     // Remove the whole folder from cellars/dir
     // Before that check if the shell.nix and nix profiles still exist and.. do something.
+    match confirm {
+        true => {},
+        false => {
+            println!("aborting discard: {}", _args.name);
+            return Ok(());
+        }
+    }
+    if _args.keep_folder {
+        println!("discarding cellar: {}. configuration file will be removed, but the folder will be kept.", _args.name);
+
+        let cellar = crate::cellar::Cellar::load(&_args.name)?;
+        let config = cellar.config_path();
+        std::fs::remove_file(&config)
+        .map_err(|e| format!("failed to delete environment config: {}", e))?;
+        println!("{} discarded, configuration file (.TOML) should now be removed.", _args.name);
+    } else {
+        println!("discarding cellar: {}. configuration file and folder will be removed.", _args.name);
+
+        let cellar = crate::cellar::Cellar::load(&_args.name)?;
+        let dir = cellar.cellar_dir();
+        std::fs::remove_dir_all(&dir)
+            .map_err(|e| format!("failed to delete environment folder: {}", e))?;
+        println!("{} discarded, configuration file (.TOML) and directory should now be removed.", _args.name);
+    }
+
     Ok(())
 }
 
