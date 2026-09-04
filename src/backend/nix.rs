@@ -6,7 +6,7 @@
 /// So this file is probably going to change a lot.
 
 use crate::cellar::Cellar;
-use std::{fs::exists, os::unix::process::CommandExt, process::Command};
+use std::{fmt::format, fs::exists, os::unix::process::CommandExt, process::Command};
 
 pub fn write() {}
 
@@ -44,8 +44,7 @@ pub fn write_shell(cellar: &Cellar) -> Result<(), String> {
 }
 
 pub fn add_package(cellar: &Cellar, package: &str) -> Result<(), String> {
-    let profile = directory(&cellar);
-    todo!("Searches for symlink. This isn't how nix profiles are used. FIX.");
+    let profile = directory(&cellar).join("profiles").join("nix-profile");
     let status = Command::new("nix-env")
         .args(["--profile"])
         .arg(profile)
@@ -93,6 +92,21 @@ pub fn run_cellar(cellar: &Cellar) -> Result<(), String> {
     .exec().to_string())
 }
     
+
+fn remove_packages(cellar: &Cellar) -> Result<(), String> {
+    todo!("implement remove_packages function to remove all packages installed for a specific cellar");
+    let profile_dir = directory(&cellar).join("profiles");
+    let status = Command::new("nix-env")
+        .args(["--profile"])
+        .arg(profile_dir.join("nix-profile")) // i think these names should be variables?
+        .args(["--uninstall", "--all"])
+        .status()
+        .map_err(|error| format!("Failed to run nix-env: {error}"))?;
+    if !status.success() {
+        return Err(format!("nix-env exited with status: {}", status));
+    }
+    Ok(())
+}
 /// Needs to be edited.
 /// RN removes all packages installed. So wont be cellar specific.
 /// I need to add profile keeping logic for nix aswell.
