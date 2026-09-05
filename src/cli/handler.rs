@@ -71,12 +71,10 @@ pub fn exit(_args: &args::ExitArgs) -> Result<(), String>{
 pub fn kill(_args: &args::KillArgs) -> Result<(), String>{
     // Remove shell.nix file, keep config file for future quick reconstruction of the environment
     let cellar = crate::cellar::Cellar::load(&_args.name)?;
-    let env_path = backend::nix::shell_path(&cellar);
-    std::fs::remove_file(&env_path)
-        .map_err(|e| format!("failed to delete environment: {}", e))?;
-
-    // Garbage collect
-    backend::nix::garbage_collect()?;
+    //let env_path = backend::nix::shell_path(&cellar);
+    //std::fs::remove_file(&env_path)
+    //    .map_err(|e| format!("failed to delete environment: {}", e))?;
+    backend::nix::kill_cellar(&cellar)?;
     println!("cleaned up cellar: {}", _args.name);
     Ok(())
 }

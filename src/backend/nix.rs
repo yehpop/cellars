@@ -8,6 +8,9 @@
 use crate::cellar::Cellar;
 use std::{fmt::format, fs::exists, os::unix::process::CommandExt, process::Command};
 
+struct NixBackend {}
+impl NixBackend {}
+
 pub fn write() {}
 
 /// Does this make sense?
@@ -25,7 +28,7 @@ pub fn gen_shell(cellar: &Cellar) -> String {
     let packages = cellar
         .packages
         .iter()
-        .map(|p| format!("  pkgs.{} ", p))
+        .map(|p| format!("  pkgs.{} ", p.to_string()))
         .collect::<Vec<_>>()
         .join(" \n");
 
@@ -44,11 +47,16 @@ pub fn write_shell(cellar: &Cellar) -> Result<(), String> {
 }
 
 pub fn add_package(cellar: &Cellar, package: &str) -> Result<(), String> {
-    let profile = directory(&cellar).join("profiles").join("nix-profile");
+    let profile_dir = directory(&cellar).join("profiles");
+    if !profile_dir.exists() {
+        std::fs::create_dir_all(&profile_dir)
+            .map_err(|e| format!("Failed to create profile directory: {}", e))?;
+    }
     let status = Command::new("nix-env")
         .args(["--profile"])
-        .arg(profile)
-        .args(["--file", "<nixpkgs>", "--install", "--attr", package])
+        .arg(profile_dir.join("nix-profile"))
+        //.args(["--file", "<nixpkgs>", "--install", "--attr", package])
+        .args(["--install", package])
         .status()
         .map_err(|error| format!("Failed to run nix-env: {error}"))?;
     if !status.success() {
@@ -91,15 +99,53 @@ pub fn run_cellar(cellar: &Cellar) -> Result<(), String> {
     .env("CELLAR_ENV", &cellar.name)
     .exec().to_string())
 }
-    
 
-fn remove_packages(cellar: &Cellar) -> Result<(), String> {
-    todo!("implement remove_packages function to remove all packages installed for a specific cellar");
+pub fn kill_cellar(cellar: &Cellar) -> Result<(), String> {
+    remove_all_packages(cellar)?;
+    remove_profiles(cellar)?;
+    garbage_collect()?;
+    Ok(())
+}
+
+pub fn remove_packages(cellar: &Cellar, packages: &[String]) -> Result<(), String> {
+    let profile = directory(&cellar).join("profiles").join("nix-profile");
+    match packages.len() {
+        0 => return Err("No packages specified for removal".to_string()),
+        1 => {
+            let status = Command::new("nix-env")
+                .args(["--profile"])
+                .arg(profile)
+                .args(["--uninstall"])
+                .arg(&packages[0])
+                .status()
+                .map_err(|error| format!("Failed to run nix-env: {error}"))?;
+            if !status.success() {
+                return Err(format!("nix-env exited with status: {}", status));
+            }
+        }
+        _ => {
+            let status = Command::new("nix-env")
+                .args(["--profile"])
+                .arg(profile)
+                .args(["--uninstall"])
+                .args(packages)
+                .status()
+                .map_err(|error| format!("Failed to run nix-env: {error}"))?;
+            if !status.success() {
+                return Err(format!("nix-env exited with status: {}", status));
+            }   
+        }
+    }
+    Ok(())
+}
+
+
+fn remove_all_packages(cellar: &Cellar) -> Result<(), String> {
     let profile_dir = directory(&cellar).join("profiles");
     let status = Command::new("nix-env")
         .args(["--profile"])
-        .arg(profile_dir.join("nix-profile")) // i think these names should be variables?
-        .args(["--uninstall", "--all"])
+        .arg(profile_dir.join("nix-profile")) // i think these path names should be variables?
+        .args(["--uninstall", "*"]) // removes everything from profile
         .status()
         .map_err(|error| format!("Failed to run nix-env: {error}"))?;
     if !status.success() {
@@ -107,26 +153,38 @@ fn remove_packages(cellar: &Cellar) -> Result<(), String> {
     }
     Ok(())
 }
-/// Needs to be edited.
-/// RN removes all packages installed. So wont be cellar specific.
-/// I need to add profile keeping logic for nix aswell.
-/// So each cellar install or cellar add or whatever call will, update the toml, update the shell.nix AND nix profile install the package.
-/// Then when kill is called either there should be additional logic here that;
-/// first deletes packages from the nix profile, nix profile remove --all --profile $PROFILE
-/// deletes older generations of the nix profile nix profile wipe-history --profile $PROFILE
-/// or go nix-env profile remove --profile $PROFILE (i'll look into this too)
-/// and then deletes the profile rm $PROFILE
-/// and then runs garbage collection. nix-collect-garbage i'll look into that.
-/// 
-/// or each part of this logic will be separated into different functions and called from the kill handler in cli/handler.rs
-/// which seems the better option.
-/// 
-/// Tho I am unsure because I want to group backends to implement a common trait,
-/// Other package managers will have a different logic.
-/// Keep thinking be yusa
-pub fn garbage_collect() -> Result<(), String> {
+
+fn remove_profiles(cellar: &Cellar) -> Result<(), String> {
+    let profiles = directory(&cellar).join("profiles");
+    if profiles.exists() {
+        // Remove older generations of the nix profile with nix
+        remove_older_profile_generations(profiles.join("nix-profile"))?;
+        // Remove the directory and current profile by hand.
+        // I think we could just only do this anyway but i thought it'd be neat to remove older gens with nix first.
+        // And i wanted to put an extra function to do that in case we use it anywhere else.
+        std::fs::remove_dir_all(profiles).map_err(|e| format!("Failed to remove profiles directory: {}", e))?;
+    }
+    Ok(())
+}
+
+fn remove_older_profile_generations(profile: std::path::PathBuf) -> Result<(), String>{
+    let status = Command::new("nix-env")
+            .args(["--profile"])
+            .arg(&profile)
+            .args(["--delete-generations", "old"])
+            .status()
+            .map_err(|e| format!("Failed to run nix-env-delete-generations: {}", e))?;
+    if !status.success() {
+        return Err(format!("nix-env-delete-generations exited with status: {}", status));
+    }
+    Ok(())
+}
+
+/// Remove files from disk. Will remove anything that is not in use by nix.
+/// If nix is normally used by the user this may be an issue?
+/// So im going to somehow check this in the handler.
+fn garbage_collect() -> Result<(), String> {
     let status = Command::new("nix-collect-garbage")
-        .arg("-d")
         .status()
         .map_err(|e| format!("Failed to run nix-collect-garbage: {}", e))?;
 
@@ -227,11 +285,5 @@ use super::*;
             .arg("--version")
             .status()
             .expect("Failed to run jq");
-    }
-
-    //#[test]
-    /// no. i would first need to remove the shell.nix file from the cellar before running garbage collection, otherwise it will fail because the shell.nix file is still in use.
-    fn test_garbage_collect() {
-        garbage_collect().expect("Failed to run garbage collection");
     }
 }
