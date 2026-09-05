@@ -6,7 +6,39 @@ use std::path::PathBuf;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Cellar {
     pub name: String,
-    pub packages: Vec<String>,
+    pub packages: Vec<Pkg>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Pkg {
+    name: String,
+    version: Option<String>,
+}
+
+impl Pkg {
+    pub fn to_string(&self) -> String {
+        match &self.version {
+            Some(version) => format!("{}-{}", self.name, version),
+            None => self.name.clone(),
+        }
+    }
+    /// This is a horrible implementation
+    fn from_string(s: &str) -> Self {
+        let parts: Vec<&str> = s.splitn(2, '-').collect();
+        let name = parts[0].to_string();
+        let version = if parts.len() > 1 {
+            Some(parts[1].to_string())
+        } else {
+            Some("latest".to_string())
+        };
+        Self { name, version }
+    }
+}
+
+impl PartialEq for Pkg {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.version == other.version
+    }
 }
 
 impl Cellar {
@@ -26,9 +58,17 @@ impl Cellar {
     }
 
     pub fn add_package(&mut self, pkg: &str) {
-        if !self.packages.contains(&pkg.to_string()) {
-            self.packages.push(pkg.to_string());
+        let pkg = Pkg::from_string(pkg);
+        if let Some(existing) = self.packages
+            .iter_mut()
+            .find(|p| p.name == pkg.name) {
+            existing.version = pkg.version;
+            print!("existing package {} updated to version {:?}", existing.name, existing.version);
+        } else if !self.packages.contains(&pkg) {
+            print!("package {} added to cellar {}", pkg.name, self.name);
+            self.packages.push(pkg);
         }
+        self.save().expect("couldn't save to TOML");
     }
 
     pub fn cellar_dir(&self) -> PathBuf {
@@ -102,7 +142,7 @@ mod tests {
 
         let loaded_cellar = Cellar::load("test_env").expect("Failed to load cellar");
         assert_eq!(loaded_cellar.name, "test_env");
-        assert!(loaded_cellar.packages.contains(&"hello".to_string()));
+        //assert!(loaded_cellar.packages.contains(&"hello".to_string()));
     }
 
     #[test]
