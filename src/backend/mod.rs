@@ -1,10 +1,15 @@
 pub mod nix;
 
-use std::{ffi::OsStr, io, os::unix::process::CommandExt, process::Command};
+use std::{cell, ffi::OsStr, io, os::unix::process::CommandExt, process::Command};
+
+use crate::cellar::Cellar;
 
 /// Maybe split package-manager backends from docker-image type backends??
 trait Backend {
-    
+    fn create(cellar: &Cellar) -> Self;
+    fn run_cellar();
+    fn kill_cellar();
+    fn install_package();
 }
 
 pub fn run() {}

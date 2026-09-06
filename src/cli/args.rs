@@ -31,7 +31,7 @@ pub struct CreateArgs {
 
 #[derive(Args, Debug)]
 pub struct InstallArgs {
-    #[arg(long, help = "Install a package in the environment")]
+    #[arg(help = "Install a package in the environment")]
     pub(super) package: String,
 }
 

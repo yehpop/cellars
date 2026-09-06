@@ -8,12 +8,32 @@
 use crate::cellar::Cellar;
 use std::{fmt::format, fs::exists, os::unix::process::CommandExt, process::Command};
 
-struct NixBackend {}
-impl NixBackend {}
+struct NixBackend {
+    directory: std::path::PathBuf,
+    profile_dir: std::path::PathBuf,
+}
+impl super::Backend for NixBackend {
+    fn create(cellar: &Cellar) -> Self {
+        let directory = cellar.cellar_dir().join("nix");
+        if !directory.exists() {
+        std::fs::create_dir_all(&directory).expect("failed to create nix directory");
+        }
+        let profile_dir = directory.join("profiles");
+        if !profile_dir.exists() {
+            std::fs::create_dir_all(&profile_dir).expect("failed to create profile directory");
+        }
+        write_shell(cellar).expect("failed to write shell.nix while creating nix backend"); // subject to change
+        Self { directory, profile_dir }
+    }
+    fn run_cellar() {}
+    fn kill_cellar() {}
+    fn install_package() {}
+}
+
 
 pub fn write() {}
 
-/// Does this make sense?
+/// Change this with struct
 fn directory(cellar: &Cellar) -> std::path::PathBuf {
     let path = cellar.cellar_dir().join("nix");
     if exists(&path).expect("can't tell if the cellar's config path for nix exists: ") {
@@ -31,7 +51,7 @@ pub fn gen_shell(cellar: &Cellar) -> String {
         .map(|p| format!("  pkgs.{} ", p.to_string()))
         .collect::<Vec<_>>()
         .join(" \n");
-
+    
     format!(
     "{{ pkgs ? import <nixpkgs> {{ }} }}:\npkgs.mkShell {{\n  buildInputs = [ {} ];\n}}",
         packages
