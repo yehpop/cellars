@@ -6,6 +6,7 @@ use std::path::PathBuf;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Cellar {
     pub name: String,
+    pub backend: Option<String>,
     pub packages: Vec<Pkg>,
 }
 
@@ -48,13 +49,38 @@ impl Cellar {
             .expect("no config directory")
             .join("cellars")
             .join("cellars.LOG");
-        std::fs::write(&log_file, 
-        format!("{}: cellar: {} state: {}\n", chrono::Local::now().format("%Y-%m-%d %H:%M:%S"), name, "CREATED"))
-        .expect("could not write to log file: ");
+        // Check if the cellar already exists and inquire a prompt if so.
+        if Cellar::exists(name) {
+            eprintln!("Cellar '{}' configurations already exists.", name);
+            let confirm = inquire::Confirm::new("Do you want to recreate environment with existing configurations?")
+                .with_default(false)
+                .prompt()
+                .expect("failed to prompt user");
+            match confirm {
+                true => {
+                    // User wants to recreate the environment
+                    std::fs::write(&log_file, 
+                    format!("{}: cellar: {} state: {}\n", chrono::Local::now().format("%Y-%m-%d %H:%M:%S"), name, "RECREATED"))
+                    .expect("could not write to log file: ");
+                    Self::load(name).expect("failed to load existing cellar configuration")
+                }
+                false => {
+                    // User wants to abort
+                    // Maybe this option should be to overwrite and create from scratch.
+                    panic!("Operation aborted");
+                }
+            }
+        }
+        else {
+            std::fs::write(&log_file, 
+            format!("{}: cellar: {} state: {}\n", chrono::Local::now().format("%Y-%m-%d %H:%M:%S"), name, "CREATED"))
+            .expect("could not write to log file: ");
 
-        Self {
+            Self {
             name: name.to_string(),
             packages: vec![],
+            backend: None,
+            }
         }
     }
 
@@ -68,6 +94,17 @@ impl Cellar {
         } else if !self.packages.contains(&pkg) {
             print!("package {} added to cellar {}", pkg.name, self.name);
             self.packages.push(pkg);
+        }
+        self.save().expect("couldn't save to TOML");
+    }
+
+    pub fn remove_package(&mut self, pkg: &str) {
+        let pkg = Pkg::from_string(pkg);
+        if let Some(pos) = self.packages.iter().position(|p| p.name == pkg.name) {
+            self.packages.remove(pos);
+            print!("package {} removed from cellar {}", pkg.name, self.name);
+        } else {
+            print!("package {} not found in cellar {}", pkg.name, self.name);
         }
         self.save().expect("couldn't save to TOML");
     }

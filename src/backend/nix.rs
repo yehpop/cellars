@@ -6,7 +6,12 @@
 /// So this file is probably going to change a lot.
 
 use crate::cellar::Cellar;
-use std::{fmt::format, fs::exists, os::unix::process::CommandExt, process::Command};
+use std::{fs::exists, os::unix::process::CommandExt, process::Command};
+
+const DIR: &str = "nix";
+const SHELL_FILE: &str = "shell.nix";
+const PROFILE_DIR: &str = "profiles";
+const PROFILE_FILE: &str = "nix-profile";
 
 struct NixBackend {
     directory: std::path::PathBuf,
@@ -14,15 +19,15 @@ struct NixBackend {
 }
 impl super::Backend for NixBackend {
     fn create(cellar: &Cellar) -> Self {
-        let directory = cellar.cellar_dir().join("nix");
+        let directory = cellar.cellar_dir().join(DIR);
         if !directory.exists() {
         std::fs::create_dir_all(&directory).expect("failed to create nix directory");
         }
-        let profile_dir = directory.join("profiles");
+        let profile_dir = directory.join(PROFILE_DIR);
         if !profile_dir.exists() {
             std::fs::create_dir_all(&profile_dir).expect("failed to create profile directory");
         }
-        write_shell(cellar).expect("failed to write shell.nix while creating nix backend"); // subject to change
+        write_shell(cellar).expect(&format!("failed to write {} while creating nix backend", SHELL_FILE)); // subject to change
         Self { directory, profile_dir }
     }
     fn run_cellar() {}
@@ -35,8 +40,8 @@ pub fn write() {}
 
 /// Change this with struct
 fn directory(cellar: &Cellar) -> std::path::PathBuf {
-    let path = cellar.cellar_dir().join("nix");
-    if exists(&path).expect("can't tell if the cellar's config path for nix exists: ") {
+    let path = cellar.cellar_dir().join(DIR);
+    if exists(&path).expect(&format!("can't tell if the cellar's config path for nix exists: {}", path.display())) {
         path
     } else {
         std::fs::create_dir_all(&path).expect("failed to create nix directory");
@@ -60,21 +65,21 @@ pub fn gen_shell(cellar: &Cellar) -> String {
 
 pub fn write_shell(cellar: &Cellar) -> Result<(), String> {
     let shell_content = gen_shell(cellar);
-    let shell_path = directory(&cellar).join("shell.nix");
+    let shell_path = directory(&cellar).join(SHELL_FILE);
     std::fs::write(&shell_path, shell_content)
-        .map_err(|e| format!("Failed to write shell.nix: {}", e))?;
+        .map_err(|e| format!("Failed to write {}: {}", SHELL_FILE, e))?;
     Ok(())
 }
 
 pub fn add_package(cellar: &Cellar, package: &str) -> Result<(), String> {
-    let profile_dir = directory(&cellar).join("profiles");
+    let profile_dir = directory(&cellar).join(PROFILE_DIR);
     if !profile_dir.exists() {
         std::fs::create_dir_all(&profile_dir)
             .map_err(|e| format!("Failed to create profile directory: {}", e))?;
     }
     let status = Command::new("nix-env")
         .args(["--profile"])
-        .arg(profile_dir.join("nix-profile"))
+        .arg(profile_dir.join(PROFILE_FILE))
         //.args(["--file", "<nixpkgs>", "--install", "--attr", package])
         .args(["--install", package])
         .status()
@@ -86,9 +91,9 @@ pub fn add_package(cellar: &Cellar, package: &str) -> Result<(), String> {
 }
 
 pub fn run_shell(cellar: &Cellar, terminal: &str) -> Result<(), String> {
-    let shell_path = directory(&cellar).join("shell.nix");
+    let shell_path = directory(&cellar).join(SHELL_FILE);
     if !shell_path.exists() {
-        return Err(format!("shell.nix does not exist at {:?}", shell_path));
+        return Err(format!("{} does not exist at {:?}", SHELL_FILE, shell_path));
     }
 
     let status = Command::new(terminal)
@@ -106,9 +111,9 @@ pub fn run_shell(cellar: &Cellar, terminal: &str) -> Result<(), String> {
 }
 
 pub fn run_cellar(cellar: &Cellar) -> Result<(), String> {
-    let shell_path = directory(&cellar).join("shell.nix");
+    let shell_path = directory(&cellar).join(SHELL_FILE);
     if !shell_path.exists() {
-        return Err(format!("shell.nix does not exist at {:?}", shell_path));
+        return Err(format!("{} does not exist at {:?}", SHELL_FILE, shell_path));
     }
 
     println!("running cellar: {}", cellar.name);
@@ -128,7 +133,7 @@ pub fn kill_cellar(cellar: &Cellar) -> Result<(), String> {
 }
 
 pub fn remove_packages(cellar: &Cellar, packages: &[String]) -> Result<(), String> {
-    let profile = directory(&cellar).join("profiles").join("nix-profile");
+    let profile = directory(&cellar).join(PROFILE_DIR).join(PROFILE_FILE);
     match packages.len() {
         0 => return Err("No packages specified for removal".to_string()),
         1 => {
@@ -161,10 +166,10 @@ pub fn remove_packages(cellar: &Cellar, packages: &[String]) -> Result<(), Strin
 
 
 fn remove_all_packages(cellar: &Cellar) -> Result<(), String> {
-    let profile_dir = directory(&cellar).join("profiles");
+    let profile_dir = directory(&cellar).join(PROFILE_DIR);
     let status = Command::new("nix-env")
         .args(["--profile"])
-        .arg(profile_dir.join("nix-profile")) // i think these path names should be variables?
+        .arg(profile_dir.join(PROFILE_FILE)) // i think these path names should be variables?
         .args(["--uninstall", "*"]) // removes everything from profile
         .status()
         .map_err(|error| format!("Failed to run nix-env: {error}"))?;
@@ -175,10 +180,10 @@ fn remove_all_packages(cellar: &Cellar) -> Result<(), String> {
 }
 
 fn remove_profiles(cellar: &Cellar) -> Result<(), String> {
-    let profiles = directory(&cellar).join("profiles");
+    let profiles = directory(&cellar).join(PROFILE_DIR);
     if profiles.exists() {
         // Remove older generations of the nix profile with nix
-        remove_older_profile_generations(profiles.join("nix-profile"))?;
+        remove_older_profile_generations(profiles.join(PROFILE_FILE))?;
         // Remove the directory and current profile by hand.
         // I think we could just only do this anyway but i thought it'd be neat to remove older gens with nix first.
         // And i wanted to put an extra function to do that in case we use it anywhere else.
@@ -216,7 +221,7 @@ fn garbage_collect() -> Result<(), String> {
 }
 
 pub fn shell_path(cellar: &Cellar) -> std::path::PathBuf {
-    directory(cellar).join("shell.nix")
+    directory(cellar).join(SHELL_FILE)
 }
 
 
@@ -252,12 +257,12 @@ use super::*;
         cellar.add_package("hello");
         cellar.add_package("jq");
 
-        write_shell(&cellar).expect("Failed to write shell.nix");
+        write_shell(&cellar).expect(&format!("Failed to write {}", SHELL_FILE));
 
-        let shell_path = directory(&cellar).join("shell.nix");
+        let shell_path = directory(&cellar).join(SHELL_FILE);
         assert!(shell_path.exists());
 
-        let content = std::fs::read_to_string(shell_path).expect("Failed to read shell.nix");
+        let content = std::fs::read_to_string(shell_path).expect(&format!("Failed to read {}", SHELL_FILE));
         assert!(content.contains("pkgs.hello"));
         assert!(content.contains("pkgs.jq"));
     }
@@ -274,9 +279,9 @@ use super::*;
         cellar.add_package("jq");
         Cellar::save(&cellar).expect("Failed to save cellar");
 
-        write_shell(&cellar).expect("Failed to write shell.nix");
+        write_shell(&cellar).expect(&format!("Failed to write {}", SHELL_FILE));
 
-        let shell_path = directory(&cellar).join("shell.nix");
+        let shell_path = directory(&cellar).join(SHELL_FILE);
     
         // Run jq --version inside nix-shell and exit
         let status = Command::new("nix-shell")
@@ -297,7 +302,7 @@ use super::*;
         cellar.add_package("jq");
         Cellar::save(&cellar).expect("Failed to save cellar");
 
-        write_shell(&cellar).expect("Failed to write shell.nix");
+        write_shell(&cellar).expect(&format!("Failed to write {}", SHELL_FILE));
 
         run_cellar(&cellar).expect("Failed to run shell"); // test is interrupted here because the nix-shell will take over the terminal and wait for user input. 
 
