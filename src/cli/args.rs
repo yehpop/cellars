@@ -25,8 +25,8 @@ pub struct CreateArgs {
     #[arg(long="overwrite-existing", default_value_t = false, help = "Overwrite existing environment if it exists")]
     pub(super) overwrite_existing: bool,
 
-    //#[arg(long="os-image-path", help = "Use OS image for the environment", value_parser = value_parser!(PathBuf), required = false)]
-    //os_image: PathBuf,
+    #[arg(long="os-image-path", help = "Use OS image for the environment", value_parser = value_parser!(PathBuf), required = false)]
+    pub(super) os_image: Option<PathBuf>,
 }
 
 #[derive(Args, Debug)]
@@ -34,8 +34,8 @@ pub struct InstallArgs {
     #[arg(help = "Install a package in the environment")]
     pub(super) package: String,
 
-    #[arg(long = "env", help = "Install the package in the specified environment")]
-    pub(super) environment: String,
+    #[arg(required = false, long = "env", help = "Optional: Install the package in the specified environment")]
+    pub(super) environment: Option<String>,
 }
 
 #[derive(Args, Debug)]
@@ -43,8 +43,8 @@ pub struct RemoveArgs {
     #[arg(help = "Remove a package from the environment")]
     pub(super) package: String,
 
-    #[arg(long = "env", help = "Remove the package from the specified environment")]
-    pub(super) environment: String,
+    #[arg(required = false, long = "env", help = "Optional: Remove the package from the specified environment")]
+    pub(super) environment: Option<String>,
 }
 
 #[derive(Args, Debug)]

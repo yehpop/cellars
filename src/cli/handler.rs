@@ -44,11 +44,11 @@ pub fn create(_args: &args::CreateArgs) -> Result<(), String> {
 /// TODO: Add --name to install from outside the environment, or use the CELLAR_ENV environment variable to install from within the environment.
 pub fn install(_args: &args::InstallArgs) -> Result<(), String> {
     let cellar: String;
-    if _args.environment.is_empty() {
+    if _args.environment.is_none() {
         cellar = std::env::var("CELLAR_ENV").map_err(|_| "CELLAR_ENV environment variable not set".to_string())?;
     }
     else {
-        cellar = _args.environment.clone();
+        cellar = _args.environment.clone().unwrap();
     }
     let mut cellar = cellar::Cellar::load(&cellar)?;
     cellar.add_package(&_args.package);
@@ -63,11 +63,11 @@ pub fn install(_args: &args::InstallArgs) -> Result<(), String> {
 
 pub fn remove(_args: &args::RemoveArgs) -> Result<(), String> {
     let cellar: String;
-    if _args.environment.is_empty() {
+    if _args.environment.is_none() {
         cellar = std::env::var("CELLAR_ENV").map_err(|_| "CELLAR_ENV environment variable not set".to_string())?;
     }
     else {
-        cellar = _args.environment.clone();
+        cellar = _args.environment.clone().unwrap();
     }
     let mut cellar = cellar::Cellar::load(&cellar)?;
     // Add option for rollback.
