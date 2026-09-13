@@ -53,7 +53,7 @@ pub fn gen_shell(cellar: &Cellar) -> String {
     let packages = cellar
         .packages
         .iter()
-        .map(|p| format!("  pkgs.{} ", p.to_string()))
+        .map(|p| format!("  pkgs.{} ", p.name)) // No versioning right now.
         .collect::<Vec<_>>()
         .join(" \n");
     
@@ -132,6 +132,7 @@ pub fn kill_cellar(cellar: &Cellar) -> Result<(), String> {
     Ok(())
 }
 
+/// Add option to directly garbage collect
 pub fn remove_packages(cellar: &Cellar, packages: &[String]) -> Result<(), String> {
     let profile = directory(&cellar).join(PROFILE_DIR).join(PROFILE_FILE);
     match packages.len() {

@@ -33,6 +33,18 @@ pub struct CreateArgs {
 pub struct InstallArgs {
     #[arg(help = "Install a package in the environment")]
     pub(super) package: String,
+
+    #[arg(long = "env", help = "Install the package in the specified environment")]
+    pub(super) environment: String,
+}
+
+#[derive(Args, Debug)]
+pub struct RemoveArgs {
+    #[arg(help = "Remove a package from the environment")]
+    pub(super) package: String,
+
+    #[arg(long = "env", help = "Remove the package from the specified environment")]
+    pub(super) environment: String,
 }
 
 #[derive(Args, Debug)]

@@ -43,7 +43,13 @@ pub fn create(_args: &args::CreateArgs) -> Result<(), String> {
 /// 
 /// TODO: Add --name to install from outside the environment, or use the CELLAR_ENV environment variable to install from within the environment.
 pub fn install(_args: &args::InstallArgs) -> Result<(), String> {
-    let cellar = std::env::var("CELLAR_ENV").map_err(|_| "CELLAR_ENV environment variable not set".to_string())?;
+    let cellar: String;
+    if _args.environment.is_empty() {
+        cellar = std::env::var("CELLAR_ENV").map_err(|_| "CELLAR_ENV environment variable not set".to_string())?;
+    }
+    else {
+        cellar = _args.environment.clone();
+    }
     let mut cellar = cellar::Cellar::load(&cellar)?;
     cellar.add_package(&_args.package);
     backend::nix::add_package(&cellar, &_args.package)?;
@@ -54,6 +60,26 @@ pub fn install(_args: &args::InstallArgs) -> Result<(), String> {
     // And should i source it or just?? how does this even work idk.
     Ok(())
 }
+
+pub fn remove(_args: &args::RemoveArgs) -> Result<(), String> {
+    let cellar: String;
+    if _args.environment.is_empty() {
+        cellar = std::env::var("CELLAR_ENV").map_err(|_| "CELLAR_ENV environment variable not set".to_string())?;
+    }
+    else {
+        cellar = _args.environment.clone();
+    }
+    let mut cellar = cellar::Cellar::load(&cellar)?;
+    // Add option for rollback.
+    cellar.remove_package(&_args.package);
+    backend::nix::remove_packages(&cellar, &[_args.package.clone()])?;
+    cellar.save()?;
+    backend::nix::write_shell(&cellar)?;
+
+    println!("Removed package {} from environment cellar: {}", _args.package, cellar.name);
+    Ok(())
+}
+
 /// Handler for cellars config subcommand.
 pub fn config(_args: &args::ConfigArgs) -> Result<(), String>{
     Ok(())

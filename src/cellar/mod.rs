@@ -13,8 +13,8 @@ pub struct Cellar {
 /// Her şey kötü her şey kötü her şey kötü
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Pkg {
-    name: String,
-    version: Option<String>,
+    pub name: String,
+    pub version: Option<String>,
 }
 
 impl Pkg {
@@ -90,7 +90,9 @@ impl Cellar {
             .iter_mut()
             .find(|p| p.name == pkg.name) {
             existing.version = pkg.version;
-            print!("existing package {} updated to version {:?}", existing.name, existing.version);
+            print!("existing package {} updated to version {:?}", existing.name, existing.version.clone().unwrap());
+            // Maybe this should be a log entry instead of a print statement.
+            // The unwrap may be a problem anyway. from_str'ng should stop the value from be'ng None but, idk
         } else if !self.packages.contains(&pkg) {
             print!("package {} added to cellar {}", pkg.name, self.name);
             self.packages.push(pkg);
@@ -123,6 +125,8 @@ impl Cellar {
         path.join("cellar.toml")
     }
 
+    /// Make this fancier later.
+    /// Find a way
     pub fn save(&self) -> Result<(), String> {
         let path = self.config_path();
         let toml = toml::to_string_pretty(self)

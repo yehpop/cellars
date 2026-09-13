@@ -2,7 +2,7 @@ pub mod args;
 pub mod handler;
 
 use clap::{Parser, Subcommand};
-use args::{RunArgs, CreateArgs, ConfigArgs, ExitArgs, KillArgs, DiscardArgs, ListArgs, InstallArgs};
+use args::{RunArgs, CreateArgs, ConfigArgs, ExitArgs, KillArgs, DiscardArgs, ListArgs, InstallArgs, RemoveArgs};
 
 
 #[derive(Parser, Debug)]
@@ -20,6 +20,7 @@ pub enum Commands {
     Run(RunArgs),
     Create(CreateArgs),
     Install(InstallArgs),
+    Remove(RemoveArgs),
     Config(ConfigArgs),
     Exit(ExitArgs),
     Kill(KillArgs),
@@ -48,6 +49,11 @@ impl Cli {
             }
             Commands::Install(args) => {
                 if let Err(e) = handler::install(&args) {
+                    eprintln!("Error: {}", e);
+                }
+            }
+            Commands::Remove(args) => {
+                if let Err(e) = handler::remove(&args) {
                     eprintln!("Error: {}", e);
                 }
             }
