@@ -232,7 +232,7 @@ use super::*;
     /// Seems like a useless test
     #[test]
     fn gen_shell_content_correct() {
-        let mut cellar = Cellar::new("test_env");
+        let mut cellar = Cellar::new("test_env", true);
         cellar.add_package("hello");
         cellar.add_package("jq");
 
@@ -245,7 +245,7 @@ use super::*;
     /// Test that adding a package twice doesn't create duplicates
     #[test]
     fn test_add_package_prevents_duplicates() {
-        let mut cellar = Cellar::new("test");
+        let mut cellar = Cellar::new("test", true);
         cellar.add_package("nodejs");
         cellar.add_package("nodejs"); // duplicate
         assert_eq!(cellar.packages.len(), 1);
@@ -254,7 +254,7 @@ use super::*;
     /// Test that the shell is written correctly
     #[test]
     fn written_shell_contains_packages() {
-        let mut cellar = Cellar::new("test_env");
+        let mut cellar = Cellar::new("test_env", true);
         cellar.add_package("hello");
         cellar.add_package("jq");
 
@@ -275,7 +275,7 @@ use super::*;
     /// God I'm a pain in the ass.
     #[test]
     fn cellar_can_run_and_use_packages() {
-        let mut cellar = Cellar::new("test_env");
+        let mut cellar = Cellar::new("test_env", true);
         cellar.add_package("hello");
         cellar.add_package("jq");
         Cellar::save(&cellar).expect("Failed to save cellar");
@@ -298,7 +298,7 @@ use super::*;
     /// Test that the cellar can be run and the packages can be used within the environment
     /// This test is interrupted because the nix-shell will take over the terminal and wait for user input.
     fn cellar_can_run() {
-        let mut cellar = Cellar::new("test_env");
+        let mut cellar = Cellar::new("test_env", true);
         cellar.add_package("hello");
         cellar.add_package("jq");
         Cellar::save(&cellar).expect("Failed to save cellar");

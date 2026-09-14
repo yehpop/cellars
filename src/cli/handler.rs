@@ -24,7 +24,7 @@ pub fn create(_args: &args::CreateArgs) -> Result<(), String> {
 
     // As of now we should create a nix shell file
     // And save the name with the new file path in a config file
-    let cellar = crate::cellar::Cellar::new(&_args.name);
+    let cellar = crate::cellar::Cellar::new(&_args.name, _args.overwrite_existing);
     cellar.save()?;
     backend::nix::write_shell(&cellar)?;
 

@@ -44,42 +44,63 @@ impl PartialEq for Pkg {
 }
 
 impl Cellar {
-    pub fn new(name: &str) -> Self {
+    pub fn new(name: &str, overwrite_existing: bool) -> Self {
         let log_file = dirs::config_dir()
             .expect("no config directory")
             .join("cellars")
             .join("cellars.LOG");
-        // Check if the cellar already exists and inquire a prompt if so.
-        if Cellar::exists(name) {
-            eprintln!("Cellar '{}' configurations already exists.", name);
-            let confirm = inquire::Confirm::new("Do you want to recreate environment with existing configurations?")
-                .with_default(false)
-                .prompt()
-                .expect("failed to prompt user");
-            match confirm {
-                true => {
-                    // User wants to recreate the environment
-                    std::fs::write(&log_file, 
-                    format!("{}: cellar: {} state: {}\n", chrono::Local::now().format("%Y-%m-%d %H:%M:%S"), name, "RECREATED"))
+        match overwrite_existing // Maybe i should match with an Option.
+        {
+            true => {
+                // Overwrite existing cellar configuration
+                std::fs::write(&log_file,
+                format!("{}: cellar: {} state: {}\n", chrono::Local::now().format("%Y-%m-%d %H:%M:%S"), name, "OVERWRITTEN"))
                     .expect("could not write to log file: ");
-                    Self::load(name).expect("failed to load existing cellar configuration")
-                }
-                false => {
-                    // User wants to abort
-                    // Maybe this option should be to overwrite and create from scratch.
-                    panic!("Operation aborted");
-                }
+                Self::load(name).expect("failed to load existing cellar configuration")
             }
-        }
-        else {
-            std::fs::write(&log_file, 
+            false => {
+                // Check if the cellar already exists and inquire a prompt if so.
+                if Cellar::exists(name) {
+                    eprintln!("Cellar '{}' configurations already exists.", name);
+                    let confirm = inquire::Confirm::new("Do you want to recreate environment with existing configurations?")
+                        .with_default(false)
+                        .prompt()
+                        .expect("failed to prompt user");
+                    match confirm {
+                    true => {
+                        // User wants to recreate the environment
+                        std::fs::write(&log_file, 
+                        format!("{}: cellar: {} state: {}\n", chrono::Local::now().format("%Y-%m-%d %H:%M:%S"), name, "RECREATED"))
+                            .expect("could not write to log file: ");
+                        Self::load(name).expect("failed to load existing cellar configuration")
+                        }
+                    false => {
+                        // User wants to abort
+                        // Maybe this option should be to overwrite and create from scratch.
+                        // And maybe DONT panic
+                        panic!
+(
+"
+Operation aborted, check cellar configuration; 
+if configuration is not needed anymore, retry with --overwrite_existing flag to overwrite existing configuration. 
+If you want to keep the existing configuration and it is what you are looking for, use cellars run or create with the --run flag, 
+if none apply create the environment with a different name.
+"
+);
+                        }
+                    }
+                }
+                else {
+                    std::fs::write(&log_file, 
             format!("{}: cellar: {} state: {}\n", chrono::Local::now().format("%Y-%m-%d %H:%M:%S"), name, "CREATED"))
-            .expect("could not write to log file: ");
+                        .expect("could not write to log file: ");
 
-            Self {
-            name: name.to_string(),
-            packages: vec![],
-            backend: None,
+                    Self {
+                    name: name.to_string(),
+                    packages: vec![],
+                    backend: None,
+                    }
+                }
             }
         }
     }
@@ -178,7 +199,7 @@ mod tests {
 
     #[test]
     fn cellar_can_save_and_load() {
-        let mut cellar = Cellar::new("test_env");
+        let mut cellar = Cellar::new("test_env", true);
         cellar.add_package("hello");
         cellar.save().expect("Failed to save cellar");
 
@@ -189,7 +210,7 @@ mod tests {
 
     #[test]
     fn test_cellar_serializes_to_toml() {
-        let mut cellar = Cellar::new("test_env");
+        let mut cellar = Cellar::new("test_env", true);
         cellar.add_package("git");
         
         let toml = toml::to_string(&cellar).unwrap();
@@ -200,7 +221,7 @@ mod tests {
     /// Ofc this doesn't pass right now because my great cellar_dir() function doesn't sanitize the name. But it should. Right?
     #[test]
     fn test_cellar_dir_path_sanitizes_name() {
-        let cellar = Cellar::new("../../../../etc/passwd");
+        let cellar = Cellar::new("../../../../etc/passwd", true);
         let path = cellar.cellar_dir();
     
         // Should not contain ".."

@@ -22,7 +22,7 @@ pub struct CreateArgs {
     #[arg(long, help = "Run the environment after creating it")]
     pub(super) run: bool,
 
-    #[arg(long="overwrite-existing", default_value_t = false, help = "Overwrite existing environment if it exists")]
+    #[arg(long="overwrite_existing", default_value_t = false, help = "Overwrite existing environment if it exists")]
     pub(super) overwrite_existing: bool,
 
     #[arg(long="os-image-path", help = "Use OS image for the environment", value_parser = value_parser!(PathBuf), required = false)]
