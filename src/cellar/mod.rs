@@ -1,7 +1,7 @@
 /// TOML files for the configurations?
 /// wait. does that go here?
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::{path::PathBuf, io::Write};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Cellar {
@@ -44,18 +44,26 @@ impl PartialEq for Pkg {
 }
 
 impl Cellar {
-    pub fn new(name: &str, overwrite_existing: bool) -> Self {
-        let log_file = dirs::config_dir()
+    fn log_file_path() -> PathBuf {
+        dirs::config_dir()
             .expect("no config directory")
             .join("cellars")
-            .join("cellars.LOG");
+            .join("cellars.LOG")
+    }
+    pub fn new(name: &str, overwrite_existing: bool) -> Self {
+        let mut log_file = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(Cellar::log_file_path())
+            .expect("could not open log file: ");
         match overwrite_existing // Maybe i should match with an Option.
         {
             true => {
                 // Overwrite existing cellar configuration
-                std::fs::write(&log_file,
-                format!("{}: cellar: {} state: {}\n", chrono::Local::now().format("%Y-%m-%d %H:%M:%S"), name, "OVERWRITTEN"))
-                    .expect("could not write to log file: ");
+                writeln!(log_file,
+                        "{}: cellar: {} state: {}", 
+                        chrono::Local::now().format("%Y-%m-%d %H:%M:%S"), name, "OVERWRITTEN & RECREATED")
+                        .expect("could not write to log file: ");
                 Self::load(name).expect("failed to load existing cellar configuration")
             }
             false => {
@@ -69,9 +77,10 @@ impl Cellar {
                     match confirm {
                     true => {
                         // User wants to recreate the environment
-                        std::fs::write(&log_file, 
-                        format!("{}: cellar: {} state: {}\n", chrono::Local::now().format("%Y-%m-%d %H:%M:%S"), name, "RECREATED"))
-                            .expect("could not write to log file: ");
+                        writeln!(log_file,
+                                "{}: cellar: {} state: {}", 
+                                chrono::Local::now().format("%Y-%m-%d %H:%M:%S"), name, "OVERWRITTEN & RECREATED")
+                                .expect("could not write to log file: ");
                         Self::load(name).expect("failed to load existing cellar configuration")
                         }
                     false => {
@@ -91,8 +100,9 @@ if none apply create the environment with a different name.
                     }
                 }
                 else {
-                    std::fs::write(&log_file, 
-            format!("{}: cellar: {} state: {}\n", chrono::Local::now().format("%Y-%m-%d %H:%M:%S"), name, "CREATED"))
+                    writeln!(log_file,
+                        "{}: cellar: {} state: {}", 
+                        chrono::Local::now().format("%Y-%m-%d %H:%M:%S"), name, "CREATED")
                         .expect("could not write to log file: ");
 
                     Self {

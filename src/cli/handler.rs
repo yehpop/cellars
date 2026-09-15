@@ -95,14 +95,77 @@ pub fn exit(_args: &args::ExitArgs) -> Result<(), String>{
 
 /// Handler for cellars kill subcommand.
 pub fn kill(_args: &args::KillArgs) -> Result<(), String>{
-    // Remove shell.nix file, keep config file for future quick reconstruction of the environment
-    let cellar = crate::cellar::Cellar::load(&_args.name)?;
-    //let env_path = backend::nix::shell_path(&cellar);
-    //std::fs::remove_file(&env_path)
-    //    .map_err(|e| format!("failed to delete environment: {}", e))?;
-    backend::nix::kill_cellar(&cellar)?;
-    println!("cleaned up cellar: {}", _args.name);
-    Ok(())
+    match _args.remove_all {
+        true => {
+        if _args.discard {
+                let confirm = inquire::Confirm::new("This will erase all dependencies and packages installed for all cellars on the device. AND discard all data. The environments will not be recreatable nor recoverable. Are you sure you want to continue?")
+                    .with_default(false)
+                    .prompt()
+                    .map_err(|e| format!("failed to prompt user: {}", e))?;
+                match confirm {
+                    true => {
+                        todo!("implement remove_all functionality");         
+                        
+                    },
+                    false => {
+                        println!("aborting kill: {}", _args.name);
+                        return Ok(())
+                    
+                    }
+                }
+            }
+            let confirm = inquire::Confirm::new("This will erase all dependencies and packages installed for all cellars on the device. Are you sure you want to continue?")
+                .with_default(false)
+                .prompt()
+                .map_err(|e| format!("failed to prompt user: {}", e))?;
+            match confirm {
+                true => {
+                    todo!("implement remove_all functionality");         
+                    println!("discarding cellar: {}. configuration file and folder will be removed.", _args.name);
+                    let cellar = crate::cellar::Cellar::load(&_args.name)?;
+                    let dir = cellar.cellar_dir();
+                    std::fs::remove_dir_all(&dir)
+                        .map_err(|e| format!("failed to delete environment folder: {}", e))?;
+                    println!("{} discarded, configuration file (.TOML) and directory should now be removed.", _args.name);
+                    return Ok(())
+                },
+                false => {
+                    println!("aborting kill: {}", _args.name);
+                    return Ok(())
+                
+                }
+            }
+        }
+        false => {
+            // Remove shell.nix file, keep config file for future quick reconstruction of the environment
+            let cellar = crate::cellar::Cellar::load(&_args.name)?;
+            if _args.yes {
+                //let env_path = backend::nix::shell_path(&cellar);
+                //std::fs::remove_file(&env_path)
+                //    .map_err(|e| format!("failed to delete environment: {}", e))?;
+                backend::nix::kill_cellar(&cellar)?;
+                //cellar.backend.kill(&cellar)?;
+                println!("cleaned up cellar: {}", _args.name);
+                return Ok(())
+            }
+            let confirm = inquire::Confirm::new(&format!("Are you sure you want to kill the environment cellar: {}?", _args.name))
+                .with_default(false)
+                .prompt()
+                .map_err(|e| format!("failed to prompt user: {}", e))?;
+            match confirm {
+                true => {
+                    backend::nix::kill_cellar(&cellar)?;
+                    println!("cleaned up cellar: {}", _args.name);
+                    Ok(())
+                },
+                false => {
+                    println!("aborting kill: {}", _args.name);
+                    return Ok(())
+                }
+            }
+        }
+    }
+
 }
 
 /// Handler for cellars discard subcommand.
@@ -117,7 +180,7 @@ pub fn discard(_args: &args::DiscardArgs) -> Result<(), String>{
         true => {},
         false => {
             println!("aborting discard: {}", _args.name);
-            return Ok(());
+            return Ok(())
         }
     }
     if _args.keep_folder {
@@ -143,6 +206,7 @@ pub fn discard(_args: &args::DiscardArgs) -> Result<(), String>{
 
 /// Handler for cellars list subcommand.
 pub fn list(_args: &args::ListArgs) -> Result<(), String>{
+    todo!("Implement Registry and list functionality");
     Ok(())
 }
 

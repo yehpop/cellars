@@ -43,7 +43,7 @@ pub struct RemoveArgs {
     #[arg(help = "Remove a package from the environment")]
     pub(super) package: String,
 
-    #[arg(required = false, long = "env", help = "Optional: Remove the package from the specified environment")]
+    #[arg(long="env", required = false, long = "env", help = "Optional: Remove the package from the specified environment")]
     pub(super) environment: Option<String>,
 }
 
@@ -77,6 +77,9 @@ pub struct KillArgs {
 
     #[arg(long, help = "Discard the environment after killing. Will remove the configuration files for the environment after erasing all packages and dependencies.")]
     pub(super) discard: bool,
+
+    #[arg(short, help = "skip confirmation prompt for killing the environment")]
+    pub(super) yes: bool,
 
     // make note
     //clean:bool,

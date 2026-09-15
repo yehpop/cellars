@@ -18,6 +18,6 @@ fn test_install_package() {
 #[test]
 fn test_kill_cellar() {
     let mut cmd = Command::cargo_bin("cellars").unwrap();
-    let assert = cmd.arg("kill").arg("test_cellar").assert();
+    let assert = cmd.arg("kill").arg("test_cellar").arg("-y").assert();
     assert.success().stdout(predicate::str::contains("cleaned up cellar: test_cellar")); 
 }
