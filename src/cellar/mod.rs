@@ -51,6 +51,7 @@ impl Cellar {
             .join("cellars.LOG")
     }
     pub fn new(name: &str, overwrite_existing: bool) -> Self {
+        let name = &Cellar::sanitize(name);
         let mut log_file = std::fs::OpenOptions::new()
             .create(true)
             .append(true)
@@ -64,7 +65,11 @@ impl Cellar {
                         "{}: cellar: {} state: {}", 
                         chrono::Local::now().format("%Y-%m-%d %H:%M:%S"), name, "OVERWRITTEN & RECREATED")
                         .expect("could not write to log file: ");
-                Self::load(name).expect("failed to load existing cellar configuration")
+                Self {
+                    name: name.to_string(),
+                    packages: vec![],
+                    backend: None,
+                    }
             }
             false => {
                 // Check if the cellar already exists and inquire a prompt if so.
@@ -142,12 +147,14 @@ if none apply create the environment with a different name.
         self.save().expect("couldn't save to TOML");
     }
 
+    /// Slight issue.. What about custom paths for cellars?
+    /// I'll just add a check before this match
     pub fn cellar_dir(&self) -> PathBuf {
         dirs::config_dir()
             .expect("no config directory")
             .join("cellars")
             .join("dir")
-            .join(&self.name)
+            .join(Cellar::sanitize(&self.name))
     }
 
     pub fn config_path(&self) -> PathBuf {
@@ -172,7 +179,7 @@ if none apply create the environment with a different name.
             .expect("no config directory")
             .join("cellars")
             .join("dir")
-            .join(name)
+            .join(Cellar::sanitize(name))
             .join("cellar.toml");
 
         let contents = std::fs::read_to_string(&path)
@@ -186,10 +193,17 @@ if none apply create the environment with a different name.
     /// Returns true if the cellar TOML file exists. Doesn't check the shell.nix file or the TOML file's content.
     pub fn exists(name: &str) -> bool {
         let path = dirs::config_dir()
-            .map(|p| p.join("cellars").join("dir").join(name).join("cellar.toml"))
+            .map(|p| p.join("cellars").join("dir").join(Cellar::sanitize(name)).join("cellar.toml"))
             .map(|p| p.exists())
             .unwrap_or(false);
         path
+    }
+
+    fn sanitize(name: &str) -> String {
+        name.trim_matches(|c| c == '/' || c == '\\' || c == '.')
+            .replace("..", "")
+            .replace("/", "_")
+            .replace("\\", "_")
     }
 }
 
@@ -231,7 +245,8 @@ mod tests {
     /// Ofc this doesn't pass right now because my great cellar_dir() function doesn't sanitize the name. But it should. Right?
     #[test]
     fn test_cellar_dir_path_sanitizes_name() {
-        let cellar = Cellar::new("../../../../etc/passwd", true);
+        let cellar = Cellar::new("../../../../etc/passwd", false);
+        cellar.save().expect("Failed to save cellar");
         let path = cellar.cellar_dir();
     
         // Should not contain ".."
@@ -240,5 +255,10 @@ mod tests {
         // Should still be under cellars dir
         let config_dir = dirs::config_dir().unwrap();
         assert!(path.starts_with(config_dir.join("cellars")));
+
+        // Clean up
+        std::fs::remove_dir_all(&path)
+            .map_err(|e| format!("failed to delete environment folder: {}", e)).unwrap();
+        println!("{} discarded, configuration file (.TOML) and directory should now be removed.", cellar.name);
     }
 }
