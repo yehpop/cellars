@@ -19,7 +19,7 @@ pub struct RunArgs {
 pub struct CreateArgs {
     pub(super) name: String,
 
-    #[arg(long, help = "Run the environment after creating it")]
+    #[arg(short, long, help = "Run the environment after creating it")]
     pub(super) run: bool,
 
     #[arg(long="overwrite_existing", default_value_t = false, help = "Overwrite existing environment if it exists")]
@@ -27,6 +27,19 @@ pub struct CreateArgs {
 
     #[arg(long="os-image-path", help = "Use OS image for the environment", value_parser = value_parser!(PathBuf), required = false)]
     pub(super) os_image: Option<PathBuf>,
+
+    #[arg(
+        long_help="Packages to install in the environment. 
+This can also be specified after creating and running the environment using cellars install <package>. 
+The packages will be queued for installation and will be available when the environment is run. 
+[Dependent on the backend]
+Usage: 
+    cellars create <cellar_name> --with-packages package1,package2,package3 
+        OR 
+    cellars create <cellar_name> -w package1 -w package2 -w package3",)]
+    #[arg(long="with-packages", value_delimiter = ',', num_args = 1..)]
+    #[arg(short='w', action = clap::ArgAction::Append)]
+    pub (super) with_packages: Option<Vec<String>>,
 }
 
 #[derive(Args, Debug)]

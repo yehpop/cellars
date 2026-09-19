@@ -18,16 +18,31 @@ pub fn run(_args: &args::RunArgs) -> Result<(), String>{
 }
 
 /// Handler for cellars create subcommand.
+/// 
 /// IMPORTANT rn this overwrites existing cellars. CHANGE THIS LATER.
 pub fn create(_args: &args::CreateArgs) -> Result<(), String> {
     // We should validate the args
-
+    
     // As of now we should create a nix shell file
     // And save the name with the new file path in a config file
+    if _args.with_packages.is_some() {
+        let mut cellar = crate::cellar::Cellar::new(&_args.name, _args.overwrite_existing);
+        cellar.save()?;
+        let packages = _args.with_packages.as_ref().unwrap();
+        for package in packages {
+            backend::nix::add_package(&cellar, package)?;
+            cellar.add_package(package);
+        }
+        cellar.save()?;
+        backend::nix::write_shell(&cellar)?;
+        println!("Created environment cellar {} with packages: {:?}", _args.name, packages);
+        if _args.run { backend::nix::run_cellar(&cellar)?; }
+        return Ok(())
+    } 
     let cellar = crate::cellar::Cellar::new(&_args.name, _args.overwrite_existing);
     cellar.save()?;
     backend::nix::write_shell(&cellar)?;
-
+    
     // I didnt think of where shell files should be stored, but I guess it could be in a hidden folder in the home directory, like ~/.cellars
     // Since the environments are mainly to be used with projects they could be stored whereever the user calls cellars create 
     // but i havent looked into nix yet either.
@@ -37,6 +52,7 @@ pub fn create(_args: &args::CreateArgs) -> Result<(), String> {
         //backend::run() 
         backend::nix::run_cellar(&cellar)?;
     }
+
     Ok(())
 }
 /// Handler for cellars install subcommand.
