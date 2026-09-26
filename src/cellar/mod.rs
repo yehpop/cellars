@@ -126,11 +126,11 @@ if none apply create the environment with a different name.
             .iter_mut()
             .find(|p| p.name == pkg.name) {
             existing.version = pkg.version;
-            print!("existing package {} updated to version {:?}", existing.name, existing.version.clone().unwrap());
+            println!("existing package {} updated to version {:?}", existing.name, existing.version.clone().unwrap());
             // Maybe this should be a log entry instead of a print statement.
             // The unwrap may be a problem anyway. from_str'ng should stop the value from be'ng None but, idk
         } else if !self.packages.contains(&pkg) {
-            print!("package {} added to cellar {}", pkg.name, self.name);
+            println!("package {} added to cellar {}", pkg.name, self.name);
             self.packages.push(pkg);
         }
         self.save().expect("couldn't save to TOML");

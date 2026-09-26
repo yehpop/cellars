@@ -77,6 +77,7 @@ pub fn add_package(cellar: &Cellar, package: &str) -> Result<(), String> {
         std::fs::create_dir_all(&profile_dir)
             .map_err(|e| format!("Failed to create profile directory: {}", e))?;
     }
+    println!("Adding package {} to cellar {} at path {}", package, cellar.name, profile_dir.join(PROFILE_FILE).display());
     let status = Command::new("nix-env")
         .args(["--profile"])
         .arg(profile_dir.join(PROFILE_FILE))
