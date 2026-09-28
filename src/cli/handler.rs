@@ -10,6 +10,22 @@ pub fn run(_args: &args::RunArgs) -> Result<(), String>{
     if !cellar::Cellar::exists(&_args.name) {
         return Err(format!("Cellar {} does not exist", _args.name));
     } // ?????
+    // This is going to be altered. Since our only backend is not going to be nix when moving on,
+    // and we want to use the backend module for backend handling, there'll be e.g. a backend::exists()
+    // that checks the cellar can run and hasnt been removed, and if removed a confirmation to recreate it from the
+    // TOML will be prompted. 
+    else if !backend::nix::shell_path(&cellar::Cellar::load(&_args.name)?).exists() {
+        if inquire::Confirm::new(&format!("Cellar configuration for {} exists, yet packages and dependencies have been removed. Do you want to recreate the environment from recent configuration?", _args.name))
+            .with_default(false)
+            .prompt()
+            .map_err(|e| format!("failed to prompt user: {}", e))? {
+                let cellar = cellar::Cellar::load(&_args.name)?;
+                backend::nix::write_shell(&cellar)?;
+                println!("Recreated cellar: {}", _args.name);
+            } else {
+                return Err(format!("{} will not be recreated.", _args.name));
+            };
+    }
     let cellar = cellar::Cellar::load(&_args.name)?;
     backend::nix::run_cellar(&cellar)?; // Before calling this the formerly mentioned issue should be resolved.
                                         // nix run cellar will not create a shell file if non-existent, yet this is the logic i desire. (if there is a TOML)
