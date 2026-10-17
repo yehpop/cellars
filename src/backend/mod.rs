@@ -5,12 +5,26 @@ use std::{cell, ffi::OsStr, io, os::unix::process::CommandExt, process::Command}
 use crate::cellar::Cellar;
 
 /// Maybe split package-manager backends from docker-image type backends??
-trait Backend {
-    fn create(cellar: &Cellar) -> Self;
-    fn run_cellar();
-    fn kill_cellar();
-    fn install_package();
+pub trait Backend {
+    fn create(&self, cellar: &Cellar);
+    fn exists(&self, cellar: &Cellar) -> bool;
+    fn run_cellar(&self, );
+    fn kill_cellar(&self, );
+    fn install_package(&self, );
 }
+
+//pub enum Use {
+//    //Nix
+//    Nix(nix::NixBackend), //??
+//    //Homebrew,
+//}
+
+/// Not what i wanted.
+//pub fn use_backend(backend: Use) -> dyn Backend {
+//    match backend {
+//        Use::Nix => nix::NixBackend{} //nix::NixBackend::create(&Cellar::new("default", false)), // default name for now
+//    }
+//}
 
 pub fn run() {}
 

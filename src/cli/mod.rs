@@ -29,6 +29,12 @@ pub enum Commands {
     List(ListArgs)
 }
 
+#[derive (clap::ValueEnum, Debug, Clone)]
+enum Backend {
+    Nix,
+    Docker
+}
+
 
 impl Cli {
     pub fn main() {

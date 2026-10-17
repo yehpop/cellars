@@ -13,12 +13,14 @@ const SHELL_FILE: &str = "shell.nix";
 const PROFILE_DIR: &str = "profiles";
 const PROFILE_FILE: &str = "nix-profile";
 
-struct NixBackend {
-    directory: std::path::PathBuf,
-    profile_dir: std::path::PathBuf,
-}
+pub struct NixBackend { }
+// I had fields directory and profile_dir for this struct. I feel it was unnecessary?
+// Each command is a single runtime and this is not going to persist. Why make it act like an object?
+// I mean maybe?? it'd be advantageous for uses like calling create -r where two commands are done sequentially
+// but, i dont really think so. 
+
 impl super::Backend for NixBackend {
-    fn create(cellar: &Cellar) -> Self {
+    fn create(&self, cellar: &Cellar) {
         let directory = cellar.cellar_dir().join(DIR);
         if !directory.exists() {
         std::fs::create_dir_all(&directory).expect("failed to create nix directory");
@@ -28,11 +30,13 @@ impl super::Backend for NixBackend {
             std::fs::create_dir_all(&profile_dir).expect("failed to create profile directory");
         }
         write_shell(cellar).expect(&format!("failed to write {} while creating nix backend", SHELL_FILE)); // subject to change
-        Self { directory, profile_dir }
     }
-    fn run_cellar() {}
-    fn kill_cellar() {}
-    fn install_package() {}
+    fn exists(&self, cellar: &Cellar) -> bool {
+        shell_path(cellar).exists()
+    }
+    fn run_cellar(&self, ) {}
+    fn kill_cellar(&self, ) {}
+    fn install_package(&self, ) {}
 }
 
 

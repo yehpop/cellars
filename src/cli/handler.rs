@@ -1,6 +1,4 @@
-use std::io::Stdin;
-
-use crate::{backend, cellar, cli::args};
+use crate::{backend::{self, Backend, nix::NixBackend}, cellar, cli::args};
 
 /// Handler for cellars run subcommand.
 pub fn run(_args: &args::RunArgs) -> Result<(), String>{
@@ -38,6 +36,11 @@ pub fn run(_args: &args::RunArgs) -> Result<(), String>{
 /// IMPORTANT rn this overwrites existing cellars. CHANGE THIS LATER.
 pub fn create(_args: &args::CreateArgs) -> Result<(), String> {
     // We should validate the args
+    let backend = match _args.backend {
+        super::Backend::Nix => NixBackend {}, ////
+        super::Backend::Docker => NixBackend {},
+        _ => NixBackend {}
+    };
     
     // As of now we should create a nix shell file
     // And save the name with the new file path in a config file
@@ -49,8 +52,10 @@ pub fn create(_args: &args::CreateArgs) -> Result<(), String> {
             backend::nix::add_package(&cellar, package)?;
             cellar.add_package(package);
         }
+        backend.create(&cellar); ////
         cellar.save()?;
         backend::nix::write_shell(&cellar)?;
+        // use_backend(Use::Nix).run_cellar();
         println!("Created environment cellar {} with packages: {:?}", _args.name, packages);
         if _args.run { backend::nix::run_cellar(&cellar)?; }
         return Ok(())
